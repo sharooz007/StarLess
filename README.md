@@ -2,6 +2,8 @@
 
 A lightweight browser-based tool for removing the Omni video watermark completely on your own device.
 
+🚀 **Live Demo:** [star-less.vercel.app](https://star-less.vercel.app/)
+
 The entire application runs locally in your browser using modern Web APIs. No video files are uploaded or processed remotely.
 
 > **Privacy First:** Your videos never leave your device.
