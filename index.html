@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omni Star Watermark Remover - On-Device MP4 Cleaner</title>
+<meta name="description" content="Remove the Omni star watermark from your videos locally in the browser. Outputs H.264 MP4 with original audio. Nothing is uploaded.">
+<!-- Libs self-hosted so nothing leaves the device: mp4box (demux input MP4 + keep audio), mp4-muxer (write output MP4). Pure JS, no WASM. -->
+<script src="vendor/mp4box.all.min.js"></script>
+<script src="vendor/mp4-muxer.min.js"></script>
+<link rel="stylesheet" href="fonts/space-grotesk.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- animated cosmic background -->
+<div class="bg" aria-hidden="true">
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="aurora a3"></div>
+  <div class="stars"></div>
+  <div class="stars2"></div>
+  <svg class="gstar gs1" viewBox="0 0 24 24"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+  <svg class="gstar gs2" viewBox="0 0 24 24"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+  <svg class="gstar gs3" viewBox="0 0 24 24"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+  <svg class="gstar gs4" viewBox="0 0 24 24"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+  <svg class="gstar gs5" viewBox="0 0 24 24"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<nav class="page">
+  <a class="brand" href="#top">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z"/></svg>
+    Starless
+  </a>
+  <div class="navlinks">
+    <a href="#how">How it works</a>
+    <a href="#specs">Supported</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
+<!-- HERO: value prop (left) + working tool (right) -->
+<header class="page hero" id="top">
+  <div>
+    <span class="eyebrow">On-device video tool</span>
+    <h1>Erase the Omni star.<br>Keep the <em>video</em>.</h1>
+    <p class="lead">Drop in a clip and get a clean H.264 MP4 with the original audio. Every frame is processed in your browser. Nothing is uploaded.</p>
+    <div class="hero-cta">
+      <label class="btn btn-primary" for="file">Choose a video</label>
+      <a class="btn btn-ghost" href="#how">How it works</a>
+    </div>
+  </div>
+
+  <div class="tool" id="tool">
+    <div class="tool-head">
+      <span class="tag">Watermark remover</span>
+      <span class="live"><i></i> Runs locally</span>
+    </div>
+    <label class="file" for="file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <span id="fileLabel"><b>Drop or choose a video</b></span>
+      <span class="muted">1280×720, 720×1280, 1920×1080, or 1080×1920</span>
+    </label>
+    <input id="file" type="file" accept="video/*">
+
+    <div class="field">
+      <label for="mode">Removal strength</label>
+      <select id="mode">
+        <option value="auto">Auto (recommended)</option>
+        <option value="full">Full removal</option>
+        <option value="subtle">Subtle (0.62)</option>
+      </select>
+    </div>
+
+    <button id="go" disabled>Remove watermark</button>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status" class="muted" style="margin-top:8px"></div>
+    <div id="error" class="err"></div>
+
+    <div id="outCard" style="display:none">
+      <video id="preview" controls></video>
+      <div class="row" style="margin-top:12px">
+        <button id="download">Download MP4</button>
+        <span id="outInfo" class="muted"></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- HOW IT WORKS: numbered process -->
+<section id="how" class="page reveal">
+  <div class="sec-head">
+    <span class="eyebrow">How it works</span>
+    <h2 style="margin-top:16px">Three passes, all on your machine.</h2>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="n">1</div>
+      <h3>Choose your video</h3>
+      <p>Pick an MP4 at a supported resolution. The file is read straight from disk and never leaves the tab.</p>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <h3>Lift the star</h3>
+      <p>The exact watermark shape is reverse-blended out of every frame, so detail underneath is recovered rather than blurred.</p>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <h3>Export clean MP4</h3>
+      <p>Frames are re-encoded to H.264 and muxed back with your original audio track, untouched.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SPECS: supported resolutions + capabilities -->
+<section id="specs" class="page reveal">
+  <div class="sec-head">
+    <h2>Built for the four Omni export sizes.</h2>
+    <p class="lead">The watermark mask is calibrated per resolution, so input dimensions must match exactly.</p>
+  </div>
+  <div class="specs">
+    <div class="spec"><div class="dim">1280×720</div><div class="o">Landscape HD</div></div>
+    <div class="spec"><div class="dim">720×1280</div><div class="o">Portrait HD</div></div>
+    <div class="spec"><div class="dim">1920×1080</div><div class="o">Landscape FHD</div></div>
+    <div class="spec"><div class="dim">1080×1920</div><div class="o">Portrait FHD</div></div>
+  </div>
+  <div class="caps">
+    <span class="cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Original audio preserved</span>
+    <span class="cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> H.264 MP4 output</span>
+    <span class="cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> No account, no upload</span>
+  </div>
+</section>
+
+<!-- PRIVACY / WHY -->
+<section id="privacy" class="page reveal">
+  <div class="sec-head">
+    <span class="eyebrow">Privacy</span>
+    <h2 style="margin-top:16px">Your video never leaves this tab.</h2>
+  </div>
+  <div class="points">
+    <div class="point">
+      <h3>Processed on-device</h3>
+      <p>Decoding, watermark removal, and encoding all run through WebCodecs in your browser. There is no server in the loop.</p>
+    </div>
+    <div class="point">
+      <h3>Recovered, not smeared</h3>
+      <p>Because the star is a known overlay, the original blend is inverted per pixel. The result keeps texture a blur or fill would destroy.</p>
+    </div>
+    <div class="point">
+      <h3>Audio stays intact</h3>
+      <p>The original AAC track is copied through to the output without re-encoding, so sound quality is identical to the source.</p>
+    </div>
+    <div class="point">
+      <h3>Yours to keep</h3>
+      <p>The cleaned MP4 is built in memory and handed straight to you as a download. Nothing is stored or logged anywhere.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="page reveal">
+  <div class="sec-head">
+    <h2>Questions, answered.</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>Is anything uploaded to a server? <span class="ic">+</span></summary>
+      <p>No. The whole pipeline runs in your browser using WebCodecs. Your video bytes stay on your device for the entire process.</p>
+    </details>
+    <details>
+      <summary>Why only those four resolutions? <span class="ic">+</span></summary>
+      <p>The remover uses a pixel-accurate mask of the star, and that mask is sized for each export resolution. A clip at a different size would not line up, so those dimensions are required.</p>
+    </details>
+    <details>
+      <summary>Will the audio be kept? <span class="ic">+</span></summary>
+      <p>Yes. The original audio track is passed through to the output MP4 without re-encoding. If a clip has no audio, you get a clean video-only MP4.</p>
+    </details>
+    <details>
+      <summary>Which browsers work? <span class="ic">+</span></summary>
+      <p>A recent Chromium browser such as Chrome or Edge. The tool relies on the WebCodecs API, which those browsers support. It will tell you if the API is missing.</p>
+    </details>
+    <details>
+      <summary>What does "removal strength" do? <span class="ic">+</span></summary>
+      <p>Auto estimates how strongly the star was blended and removes exactly that. Full pushes for a complete erase with edge cleanup. Subtle applies a lighter touch when the watermark is faint.</p>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="page">
+    <div class="foot-links">
+      <a href="#top">Tool</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="disclaimer.html">Disclaimer &amp; Notices</a>
+    </div>
+    <p class="foot-tm">Omni is a trademark of Google LLC. Starless is independent and is not affiliated with, endorsed by, or sponsored by Google. Process only videos you <b>own</b> or have permission to edit.</p>
+    <span>Runs locally in your browser. Best on Chrome or Edge.</span>
+  </div>
+</footer>
+
+<script defer src="js/app.js"></script>
+</body>
+</html>

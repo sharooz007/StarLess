@@ -1,0 +1,57 @@
+/* Shared styling for the legal pages (privacy / terms / disclaimer). */
+@import url("../fonts/space-grotesk.css");
+
+:root {
+  color-scheme: dark;
+  --bg:#090b10; --card:#12161f; --line:#222838; --line-soft:#1a1f2b;
+  --txt:#eaecf3; --muted:#98a1b4; --muted-2:#6b7488;
+  --accent:#6b8afd; --accent-soft:#8aa0ff;
+  --display:"Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --body:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin:0; background:var(--bg); color:var(--txt);
+  font:16px/1.7 var(--body); -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(900px 500px at 90% -10%, rgba(107,138,253,.08), transparent 60%),
+    radial-gradient(700px 400px at 0% 110%, rgba(107,138,253,.05), transparent 60%);
+  background-attachment:fixed;
+}
+a { color:var(--accent-soft); text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+.wrap { max-width:780px; margin:0 auto; padding:0 24px; }
+
+nav { display:flex; align-items:center; justify-content:space-between; height:68px; }
+.brand { display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:600; color:var(--txt); }
+.brand svg { width:20px; height:20px; color:var(--accent); }
+.back { font-size:14px; color:var(--muted); }
+.back:hover { color:var(--txt); }
+
+header.doc { padding:48px 0 24px; border-bottom:1px solid var(--line); }
+header.doc h1 { font-family:var(--display); font-weight:700; letter-spacing:-.02em;
+  font-size:clamp(2rem,4.5vw,2.8rem); margin:0 0 12px; line-height:1.08; }
+header.doc .meta { color:var(--muted-2); font-size:14px; }
+
+main.doc { padding:36px 0 64px; }
+main.doc h2 { font-family:var(--display); font-weight:600; letter-spacing:-.01em;
+  font-size:1.35rem; margin:40px 0 12px; }
+main.doc h3 { font-family:var(--display); font-weight:600; font-size:1.05rem; margin:26px 0 8px; }
+main.doc p, main.doc li { color:var(--muted); }
+main.doc strong { color:var(--txt); font-weight:600; }
+main.doc ul { padding-left:22px; }
+main.doc li { margin:8px 0; }
+
+.note { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:12px; padding:16px 18px; margin:24px 0; }
+.note p { margin:0; color:var(--muted); font-size:14.5px; }
+
+.fill { color:var(--accent-soft); font-family:ui-monospace, monospace; font-size:.95em;
+  background:rgba(107,138,253,.10); padding:1px 6px; border-radius:5px; }
+
+footer { border-top:1px solid var(--line); padding:30px 0 50px; color:var(--muted-2); font-size:13.5px; }
+footer .links { display:flex; flex-wrap:wrap; gap:10px 22px; margin-bottom:14px; }
+footer .links a { color:var(--muted); }
+footer .links a:hover { color:var(--txt); text-decoration:none; }
+footer .tm { max-width:70ch; }
