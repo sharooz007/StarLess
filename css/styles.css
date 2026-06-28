@@ -110,7 +110,7 @@ h2 { font-family:var(--display); font-weight:600; letter-spacing:-.02em; line-he
 
 /* ---- hero ---- */
 .hero { display:grid; grid-template-columns:1.04fr .96fr; gap:48px; align-items:center;
-        padding:40px 0 72px; min-height:calc(100dvh - 68px); }
+        padding-top:40px; padding-bottom:72px; min-height:calc(100dvh - 68px); }
 .hero-cta { display:flex; gap:14px; margin-top:30px; flex-wrap:wrap; }
 .btn { font:600 15px/1 var(--body); border:0; border-radius:var(--r-ctrl); padding:13px 22px;
        cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:transform .12s, background .2s, border-color .2s; }
@@ -211,7 +211,7 @@ footer b { color:var(--muted); font-weight:600; }
 
 /* ---- responsive ---- */
 @media (max-width:860px) {
-  .hero { grid-template-columns:1fr; gap:36px; padding:24px 0 56px; min-height:auto; }
+  .hero { grid-template-columns:1fr; gap:36px; padding-top:24px; padding-bottom:56px; min-height:auto; }
   .navlinks { display:none; }
   .steps { grid-template-columns:1fr; }
   .step { padding:22px 0; }
