@@ -293,7 +293,7 @@ function aacDescription(sampleRate, channels) {
 }
 
 // Build the mask + candidate placement(s) for a given resolution. Mirrors the
-// original site exactly. Shared by the processor and the debug preview.
+// original site exactly. Used by the processor.
 // 720p: bg_48 grayscale star (isRGBA=false) at four candidate margins.
 // 1080p: paired_star RGBA (isRGBA=true → soft alpha + real colours) at margins [222,186].
 async function buildMaskAndCandidates(c, u) {
@@ -511,108 +511,3 @@ $("go").addEventListener("click", async () => {
   }
 });
 
-// ============================================================================
-// Detection preview (debug): renders the first frame with the mask drawn where
-// the tool thinks the star is, so placement can be verified by eye.
-// ============================================================================
-async function decodeFirstFrames(buffer, n) {
-  const { vTrack, videoSamples, description } = await demux(buffer);
-  const c = vTrack.video.width, u = vTrack.video.height;
-  const canvas = document.createElement("canvas");
-  canvas.width = c; canvas.height = u;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const frames = [];
-  await new Promise((resolve, reject) => {
-    const dec = new VideoDecoder({
-      output: (frame) => {
-        try { ctx.drawImage(frame, 0, 0, c, u); frame.close();
-          if (frames.length < n) frames.push({ imageData: ctx.getImageData(0, 0, c, u) }); }
-        catch (e) { reject(e); }
-        if (frames.length >= n) resolve();
-      },
-      error: e => reject(e),
-    });
-    dec.configure({ codec: vTrack.codec, codedWidth: c, codedHeight: u, description: description ?? undefined });
-    const take = Math.min(videoSamples.length, n + 2);
-    for (let i = 0; i < take; i++) {
-      const s = videoSamples[i];
-      dec.decode(new EncodedVideoChunk({
-        type: s.is_sync ? "key" : "delta",
-        timestamp: 1e6 * s.cts / s.timescale, duration: 1e6 * s.duration / s.timescale, data: s.data,
-      }));
-    }
-    dec.flush().then(resolve).catch(reject);
-  });
-  return { frames, c, u };
-}
-
-function maskToCanvas(mask) {
-  const mc = document.createElement("canvas");
-  mc.width = mask.width; mc.height = mask.height;
-  const mctx = mc.getContext("2d");
-  const id = mctx.createImageData(mask.width, mask.height);
-  for (let i = 0; i < mask.values.length; i++) {
-    id.data[4*i] = 0; id.data[4*i+1] = 230; id.data[4*i+2] = 255;
-    id.data[4*i+3] = Math.round(Math.min(1, mask.values[i] * 4) * 190); // amplified for visibility (preview only)
-  }
-  mctx.putImageData(id, 0, 0);
-  return mc;
-}
-
-async function previewDetection(buffer) {
-  const { frames, c, u } = await decodeFirstFrames(buffer, 5);
-  const dimKey = `${c}x${u}`;
-  if (!SUPPORTED.has(dimKey)) throw new Error(`Unsupported dimensions ${c} × ${u}.`);
-  const { is1080, mask, candidates, margins } = await buildMaskAndCandidates(c, u);
-  for (const cand of candidates) for (const f of frames) cand.score += positionScore(f.imageData, cand);
-  const pos = detectPosition(frames, mask, c, u, is1080, candidates);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = c; canvas.height = u;
-  const ctx = canvas.getContext("2d");
-  ctx.putImageData(frames[0].imageData, 0, 0);
-  ctx.lineWidth = Math.max(2, Math.round(c / 360));
-  ctx.font = `${Math.max(13, Math.round(c / 50))}px monospace`;
-  // tuned candidate boxes (yellow, for reference)
-  candidates.forEach((cand, i) => {
-    ctx.strokeStyle = "rgba(255,210,0,.85)";
-    ctx.strokeRect(cand.x, cand.y, mask.width, mask.height);
-    ctx.fillStyle = "rgba(255,210,0,.95)";
-    ctx.fillText(`m${margins[i]}`, cand.x, cand.y - 4);
-  });
-  // chosen placement: mask shape overlay (cyan) + red box
-  ctx.drawImage(maskToCanvas(mask), pos.x, pos.y);
-  ctx.strokeStyle = "rgba(255,60,60,1)";
-  ctx.lineWidth = Math.max(3, Math.round(c / 240));
-  ctx.strokeRect(pos.x, pos.y, mask.width, mask.height);
-  ctx.fillStyle = "rgba(255,60,60,1)";
-  ctx.fillText("CHOSEN", pos.x, pos.y + mask.height + Math.round(c / 36));
-  return { dataURL: canvas.toDataURL("image/png"),
-    info: `${dimKey} · mask ${mask.width}px · chosen x=${pos.x} y=${pos.y} (${is1080 ? "m222 pinned" : "candidate"})` };
-}
-
-// inject a debug button + result image under the main button
-(function () {
-  const go = $("go");
-  if (!go) return;
-  const btn = document.createElement("button");
-  btn.textContent = "Preview detection (debug)";
-  btn.type = "button";
-  btn.style.cssText = "width:100%;margin-top:10px;padding:11px;border:1px solid var(--line,#222838);border-radius:10px;background:transparent;color:var(--muted,#98a1b4);font:600 14px/1 system-ui;cursor:pointer";
-  const img = document.createElement("img");
-  img.style.cssText = "width:100%;margin-top:12px;border-radius:8px;display:none;border:1px solid var(--line,#222838)";
-  go.after(btn);
-  btn.after(img);
-  btn.addEventListener("click", async () => {
-    if (!chosenFile) { $("error").textContent = "Choose a video first."; return; }
-    btn.disabled = true; $("error").textContent = ""; $("status").textContent = "Decoding first frames…";
-    try {
-      const { dataURL, info } = await previewDetection(await chosenFile.arrayBuffer());
-      img.src = dataURL; img.style.display = "block";
-      $("status").textContent = "Detection preview: " + info;
-    } catch (e) {
-      $("error").textContent = "Preview error: " + (e?.message || e);
-      $("status").textContent = "";
-    } finally { btn.disabled = false; }
-  });
-})();
