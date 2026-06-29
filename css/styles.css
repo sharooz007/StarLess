@@ -212,7 +212,8 @@ footer b { color:var(--muted); font-weight:600; }
 /* ---- responsive ---- */
 @media (max-width:860px) {
   .hero { grid-template-columns:1fr; gap:36px; padding-top:24px; padding-bottom:56px; min-height:auto; }
-  .navlinks { display:none; }
+  .navlinks { gap:16px; }
+  .navlinks a:not(.github-link) { display:none; }
   .steps { grid-template-columns:1fr; }
   .step { padding:22px 0; }
   .specs { grid-template-columns:1fr 1fr; }
